@@ -16,13 +16,14 @@ public:
     Figura(bool boja, int red, int kolona):
         boja(boja), red(red), kolona(kolona) {}
     virtual ~Figura() {};
-    string getNaziv() {return naziv;}
-    bool getBoja() {return boja;}
-    int getRed() {return red;}
-    int getKolona() {return kolona;}
+    string getNaziv() const {return naziv;}
+    bool getBoja() const {return boja;}
+    int getRed() const {return red;}
+    int getKolona() const {return kolona;}
     virtual bool Igraj(int red, int kolona) = 0;
     virtual Figura* Clone() const = 0;
     virtual void Pomjeri(int r, int k) = 0;
+    virtual bool DaLiJede(int k1, int k2) = 0;
     Figura& operator=(const Figura& f);
 };
 
@@ -52,6 +53,7 @@ public:
     bool Igraj(int red, int kolona);
     Figura* Clone() const {return new Kralj(*this);}
     void Pomjeri(int r, int k) {red = r; kolona = k;}
+    bool DaLiJede(int k1, int k2) {}
 };
 
 inline bool Kralj::Igraj(int red, int kolona){
@@ -77,6 +79,7 @@ public:
     bool Igraj(int red, int kolona);
     Figura* Clone() const {return new Dama(*this);}
     void Pomjeri(int r, int k) {red = r; kolona = k;}
+    bool DaLiJede(int k1, int k2) {}
 };
 
 inline bool Dama::Igraj(int red, int kolona){
@@ -106,6 +109,7 @@ public:
     bool Igraj(int red, int kolona);
     Figura* Clone() const {return new Laufer(*this);}
     void Pomjeri(int r, int k) {red = r; kolona = k;}
+    bool DaLiJede(int k1, int k2) {}
 };
 
 inline bool Laufer::Igraj(int red, int kolona){
@@ -133,6 +137,7 @@ public:
     bool Igraj(int red, int kolona);
     Figura* Clone() const {return new Skakac(*this);}
     void Pomjeri(int r, int k) {red = r; kolona = k;}
+    bool DaLiJede(int k1, int k2) {}
 };
 
 inline bool Skakac::Igraj(int red, int kolona){
@@ -160,6 +165,7 @@ public:
     bool Igraj(int red, int kolona);
     Figura* Clone() const {return new Top(*this);}
     void Pomjeri(int r, int k) {red = r; kolona = k;}
+    bool DaLiJede(int k1, int k2) {}
 };
 
 inline bool Top::Igraj(int red, int kolona){
@@ -186,13 +192,16 @@ public:
     bool Igraj(int red, int kolona);
     Figura* Clone() const {return new Pijun(*this);}
     void Pomjeri(int r, int k) {red = r; kolona = k;}
+    bool getPrviPotez() const {return prviPozez;}
+    void setPrviPotez(bool b) {prviPozez = b;}
+    bool DaLiJede(int k1, int k2) {if(++k1 == k2 || (k1 -= 2) == k2) return true; return false;}
 };
 
 inline bool Pijun::Igraj(int red, int kolona){
     if(red>8 || red<0 || kolona>8 || kolona<0)
         throw logic_error("neispravne koordinate!");
-    if(prviPozez){
-        this->prviPozez = false;
+    if(this->getPrviPotez()){
+        this->setPrviPotez(false);
         if(this->getNaziv() == "BP"){
             if((this->getRed() == red-2 && this->getKolona() == kolona) ||
                (this->getRed() == --red && this->getKolona() == kolona))
@@ -212,11 +221,15 @@ inline bool Pijun::Igraj(int red, int kolona){
         if(this->getNaziv() == "BP"){
             if(this->getRed() == --red && this->getKolona() == kolona)
                 return true;
+            else if(this->getRed() == --red && (this->getKolona() == --kolona || this->getKolona() == (kolona += 2)))
+                return true;
             else
                 return false;
         }
         else{
             if(this->getRed() == ++red && this->getKolona() == kolona)
+                return true;
+            else if(this->getRed() == ++red && (this->getKolona() == --kolona || this->getKolona() == (kolona += 2)))
                 return true;
             else
                 return false;
@@ -274,10 +287,14 @@ void SahovskaPloca::OdigrajPotez(int r1, int k1, int r2, int k2){
     if(ploca[r1][k1]->Igraj(r2,k2)){
         if(!(DaLiPreskace(r1, k1, r2, k2))){
             if(ploca[r2][k2] == nullptr){
-                ploca[r2][k2] = ploca[r1][k1]->Clone();
-                ploca[r2][k2]->Pomjeri(r2, k2);
-                delete ploca[r1][k1];
-                ploca[r1][k1] = nullptr;
+                if((ploca[r1][k1]->getNaziv() == "CP" || ploca[r1][k1]->getNaziv() == "BP") && ploca[r1][k1]->DaLiJede(k1,k2))
+                    cout<<"neispravan potez za pijuna"<<endl;
+                else{
+                    ploca[r2][k2] = ploca[r1][k1]->Clone();
+                    ploca[r2][k2]->Pomjeri(r2, k2);
+                    delete ploca[r1][k1];
+                    ploca[r1][k1] = nullptr;
+                }
             }
             else{
                 if(ploca[r2][k2]->getBoja() != ploca[r1][k1]->getBoja()){
@@ -292,7 +309,7 @@ void SahovskaPloca::OdigrajPotez(int r1, int k1, int r2, int k2){
             }
         }
         else
-            cout<<"figura "<<ploca[r1][k1]->getNaziv()<<" ne smije da preskoèi drugu figuru, pokušajte ponovo"<<endl;
+            cout<<"figura "<<ploca[r1][k1]->getNaziv()<<" ne smije da preskoÃ¨i drugu figuru, pokuÅ¡ajte ponovo"<<endl;
     }
     else
         cout<<"neispravan potez za figuru "<<ploca[r1][k1]->getNaziv()<<endl;
@@ -341,7 +358,15 @@ bool SahovskaPloca::DaLiPreskace(int r1, int k1, int r2, int k2){
 }
 
 void SahovskaPloca::Ispisi(){
+    for(int i(0); i<9; i++){
+        if(i == 0)
+            cout<<setw(4)<<setfill(' ');
+        else
+            cout<<setw(4)<<i;
+    }
+    cout<<endl;
     for(int i(0); i<8; i++){
+        cout<<i+1;
         for(int j(0); j<8; j++){
             if(ploca[i][j] == nullptr)
                 cout<<" [] ";
@@ -354,7 +379,15 @@ void SahovskaPloca::Ispisi(){
 }
 
 void Ispisi(const SahovskaPloca &s, ofstream &upis){
+    for(int i(0); i<9; i++){
+        if(i == 0)
+            upis<<setw(4)<<setfill(' ');
+        else
+            upis<<setw(4)<<i;
+    }
+    upis<<endl;
     for(int i(0); i<8; i++){
+        upis<<i+1;
         for(int j(0); j<8; j++){
             if(s.ploca[i][j] == nullptr)
                 upis<<" [] ";
@@ -373,10 +406,8 @@ int main(){
         cout<<setw(32)<<setfill('-')<<'-'<<endl;
         sah.OdigrajPotez(1,2,3,1);
         sah.OdigrajPotez(7,7,5,7);
-        sah.OdigrajPotez(2,2,3,2);
-        sah.OdigrajPotez(8,6,7,7);
-        sah.OdigrajPotez(3,1,4,3);
-        sah.OdigrajPotez(7,7,1,1);
+        sah.OdigrajPotez(2,6,4,6);
+        sah.OdigrajPotez(5,7,4,6);
         sah.Ispisi();
         ofstream ispis;
         ispis.open("sah.txt");
