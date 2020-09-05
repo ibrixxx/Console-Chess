@@ -206,33 +206,29 @@ inline bool Pijun::Igraj(int red, int kolona){
             if((this->getRed() == red-2 && this->getKolona() == kolona) ||
                (this->getRed() == --red && this->getKolona() == kolona))
                 return true;
-            else
-                return false;
+            return false;
         }
         else{
             if((this->getRed() == red+2 && this->getKolona() == kolona) ||
                (this->getRed() == ++red && this->getKolona() == kolona))
                 return true;
-            else
-                return false;
+            return false;
         }
     }
     else{
         if(this->getNaziv() == "BP"){
             if(this->getRed() == --red && this->getKolona() == kolona)
                 return true;
-            else if(this->getRed() == --red && (this->getKolona() == --kolona || this->getKolona() == (kolona += 2)))
+            if(this->getRed() == red && (this->getKolona() == --kolona || this->getKolona() == (kolona += 2)))
                 return true;
-            else
-                return false;
+            return false;
         }
         else{
             if(this->getRed() == ++red && this->getKolona() == kolona)
                 return true;
-            else if(this->getRed() == ++red && (this->getKolona() == --kolona || this->getKolona() == (kolona += 2)))
+            if(this->getRed() == red && (this->getKolona() == --kolona || this->getKolona() == (kolona += 2)))
                 return true;
-            else
-                return false;
+            return false;
         }
     }
 }
@@ -321,9 +317,6 @@ bool SahovskaPloca::DaLiPreskace(int r1, int k1, int r2, int k2){
     int minK(min(k1,k2));
     int maxK(max(k1,k2));
     string imeFigure(ploca[r1][k1]->getNaziv());
-    if(imeFigure == "CP" || imeFigure == "BP")
-        if(ploca[r2][k2] != nullptr)
-            return true;
     if(imeFigure == "CD" || imeFigure == "BD" || imeFigure == "CT" || imeFigure == "BT")
     {
         for(int i(minR+1); i<maxR; i++)
@@ -368,8 +361,12 @@ void SahovskaPloca::Ispisi(){
     for(int i(0); i<8; i++){
         cout<<i+1;
         for(int j(0); j<8; j++){
-            if(ploca[i][j] == nullptr)
-                cout<<" [] ";
+            if(ploca[i][j] == nullptr){
+                if((i+j) % 2 == 0)
+                    cout<<" [] ";
+                else
+                    cout<<" ## ";
+            }
             else
                 cout<<ploca[i][j];
         }
@@ -389,8 +386,12 @@ void Ispisi(const SahovskaPloca &s, ofstream &upis){
     for(int i(0); i<8; i++){
         upis<<i+1;
         for(int j(0); j<8; j++){
-            if(s.ploca[i][j] == nullptr)
-                upis<<" [] ";
+            if(s.ploca[i][j] == nullptr){
+                if((i+j) % 2 == 0)
+                    upis<<" [] ";
+                else
+                    upis<<" ## ";
+            }
             else
                 upis<<s.ploca[i][j];
         }
@@ -408,6 +409,12 @@ int main(){
         sah.OdigrajPotez(7,7,5,7);
         sah.OdigrajPotez(2,6,4,6);
         sah.OdigrajPotez(5,7,4,6);
+        sah.OdigrajPotez(2,2,4,2);
+        sah.OdigrajPotez(8,6,7,7);
+        sah.OdigrajPotez(2,7,3,7);
+        sah.OdigrajPotez(7,7,1,1);
+        sah.OdigrajPotez(3,7,4,6);
+        sah.OdigrajPotez(8,5,6,3);
         sah.Ispisi();
         ofstream ispis;
         ispis.open("sah.txt");
