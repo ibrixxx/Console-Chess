@@ -233,19 +233,31 @@ inline bool Pijun::Igraj(int red, int kolona){
     }
 }
 
+struct PozicijaKralja {
+    int red;
+    int kolona;
+    PozicijaKralja(int r, int k): red(r), kolona(k) {}
+    int dajRed() const {return red;}
+    int dajKolonu() const {return kolona;}
+};
 
+static int potez(0);
 
 class SahovskaPloca {
     vector<vector<Figura*>> ploca;
+    PozicijaKralja crni;
+    PozicijaKralja bijeli;
+    bool podSahom;
 public:
     SahovskaPloca();
     void OdigrajPotez(int r1, int k1, int r2, int k2);
     void Ispisi();
     friend void Ispisi(const SahovskaPloca &s, ofstream &upis);
     bool DaLiPreskace(int r1, int k1, int r2, int k2);
+    bool DaLiJeSah(Figura* figura);
 };
 
-inline SahovskaPloca::SahovskaPloca() : ploca(8, vector<Figura*>(8, nullptr)) {
+inline SahovskaPloca::SahovskaPloca() : ploca(8, vector<Figura*>(8, nullptr)), bijeli(0,3), crni(7,3), podSahom(false) {
     try{
         ploca[0][0] = new Top(1,0,0);
         ploca[0][1] = new Skakac(1,0,1);
@@ -278,37 +290,129 @@ void SahovskaPloca::OdigrajPotez(int r1, int k1, int r2, int k2){
     k1--;
     r2--;
     k2--;
-    if(ploca[r1][k1] == nullptr)
+    if(ploca[r1][k1] == nullptr){
         cout<<"polje ["<<r1<<", "<<k1<<"] je prazno!"<<endl;
+        return;
+    }
+    if(potez % 2 == 1 && ploca[r1][k1]->getBoja()){
+        cout<<"crni je na redu"<<endl;
+        return;
+    }
+    if(!(ploca[r1][k1]->getBoja()) && potez % 2 == 0){
+        cout<<"bijeli je na redu"<<endl;
+        return;
+    }
     if(ploca[r1][k1]->Igraj(r2,k2)){
         if(!(DaLiPreskace(r1, k1, r2, k2))){
-            if(ploca[r2][k2] == nullptr){
-                if((ploca[r1][k1]->getNaziv() == "CP" || ploca[r1][k1]->getNaziv() == "BP") && ploca[r1][k1]->DaLiJede(k1,k2))
-                    cout<<"neispravan potez za pijuna"<<endl;
+            if(!(podSahom)){
+                if(ploca[r2][k2] == nullptr){
+                    if((ploca[r1][k1]->getNaziv() == "CP" || ploca[r1][k1]->getNaziv() == "BP") && ploca[r1][k1]->DaLiJede(k1,k2))
+                        cout<<"neispravan potez za pijuna"<<endl;
+                    else{
+                        ploca[r2][k2] = ploca[r1][k1]->Clone();
+                        ploca[r2][k2]->Pomjeri(r2, k2);
+                        delete ploca[r1][k1];
+                        ploca[r1][k1] = nullptr;
+                        if(DaLiJeSah(ploca[r2][k2])){
+                            podSahom = true;
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "CK"){
+                            crni.red = r2;
+                            crni.kolona = k2;
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "BK"){
+                            bijeli.red = r2;
+                            bijeli.kolona = k2;
+                        }
+                    }
+                }
                 else{
-                    ploca[r2][k2] = ploca[r1][k1]->Clone();
-                    ploca[r2][k2]->Pomjeri(r2, k2);
-                    delete ploca[r1][k1];
-                    ploca[r1][k1] = nullptr;
+                    if(ploca[r2][k2]->getBoja() != ploca[r1][k1]->getBoja()){
+                        delete ploca[r2][k2];
+                        ploca[r2][k2] = ploca[r1][k1]->Clone();
+                        ploca[r2][k2]->Pomjeri(r2, k2);
+                        delete ploca[r1][k1];
+                        ploca[r1][k1] = nullptr;
+                        if(DaLiJeSah(ploca[r2][k2])){
+                            podSahom = true;
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "CK"){
+                            crni.red = r2;
+                            crni.kolona = k2;
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "BK"){
+                            bijeli.red = r2;
+                            bijeli.kolona = k2;
+                        }
+                    }
+                    else
+                        cout<<"na polju ["<<r1<<", "<<k1<<"] je figura iste boje i ne moze se jesti!"<<endl;
                 }
             }
             else{
-                if(ploca[r2][k2]->getBoja() != ploca[r1][k1]->getBoja()){
-                    delete ploca[r2][k2];
-                    ploca[r2][k2] = ploca[r1][k1]->Clone();
-                    ploca[r2][k2]->Pomjeri(r2, k2);
-                    delete ploca[r1][k1];
-                    ploca[r1][k1] = nullptr;
+                cout<<"Kralj vam je pod šahom!"<<endl;
+                if(ploca[r2][k2] == nullptr){
+                    if((ploca[r1][k1]->getNaziv() == "CP" || ploca[r1][k1]->getNaziv() == "BP") && ploca[r1][k1]->DaLiJede(k1,k2))
+                        cout<<"neispravan potez za pijuna"<<endl;
+                    else{
+                        ploca[r2][k2] = ploca[r1][k1]->Clone();
+                        ploca[r2][k2]->Pomjeri(r2, k2);
+                        if(!(DaLiJeSah(ploca[r2][k2]))){
+                            delete ploca[r1][k1];
+                            ploca[r1][k1] = nullptr;
+                            podSahom = false;
+                        }
+                        else{
+                            ploca[r2][k2] = nullptr;
+                            cout<<"pod šahom ste!"<<endl;
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "CK"){
+                            crni.red = r2;
+                            crni.kolona = k2;
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "BK"){
+                            bijeli.red = r2;
+                            bijeli.kolona = k2;
+                        }
+                    }
                 }
-                else
-                    cout<<"na polju ["<<r1<<", "<<k1<<"] je figura iste boje i ne moze se jesti!"<<endl;
+                else{
+                    if(ploca[r2][k2]->getBoja() != ploca[r1][k1]->getBoja()){
+                        Figura* pom = ploca[r2][k2];
+                        ploca[r2][k2] = ploca[r1][k1]->Clone();
+                        ploca[r2][k2]->Pomjeri(r2, k2);
+                        if(!(DaLiJeSah(ploca[r2][k2]))){
+                            delete ploca[r2][k2];
+                            delete ploca[r1][k1];
+                            ploca[r1][k1] = nullptr;
+                            podSahom = false;
+                        }
+                        else{
+                            ploca[r2][k2] = pom;
+                            delete pom;
+                            cout<<"pod šahom ste!"<<endl;
+
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "CK"){
+                            crni.red = r2;
+                            crni.kolona = k2;
+                        }
+                        if(ploca[r2][k2]->getNaziv() == "BK"){
+                            bijeli.red = r2;
+                            bijeli.kolona = k2;
+                        }
+                    }
+                    else
+                        cout<<"na polju ["<<r1<<", "<<k1<<"] je figura iste boje i ne moze se jesti!"<<endl;
+                }
             }
         }
         else
-            cout<<"figura "<<ploca[r1][k1]->getNaziv()<<" ne smije da preskoèi drugu figuru, pokušajte ponovo"<<endl;
+            cout<<"figura "<<ploca[r1][k1]->getNaziv()<<" ne smije da preskoči drugu figuru, pokušajte ponovo"<<endl;
     }
     else
         cout<<"neispravan potez za figuru "<<ploca[r1][k1]->getNaziv()<<endl;
+    potez++;
 }
 
 bool SahovskaPloca::DaLiPreskace(int r1, int k1, int r2, int k2){
@@ -347,6 +451,15 @@ bool SahovskaPloca::DaLiPreskace(int r1, int k1, int r2, int k2){
                     if(ploca[i][k1-i+r1] != nullptr)
                         return true;
     }
+    return false;
+}
+
+bool SahovskaPloca::DaLiJeSah(Figura* figura){
+    if(figura->getBoja())
+        if(figura->Igraj(crni.dajRed(), crni.dajKolonu()) && (DaLiPreskace(figura->getRed(),figura->getKolona(),crni.dajRed(),crni.dajKolonu())))
+            return true;
+    if(figura->Igraj(bijeli.dajRed(), bijeli.dajKolonu()) && (DaLiPreskace(figura->getRed(),figura->getKolona(),bijeli.dajRed(),bijeli.dajKolonu())))
+        return true;
     return false;
 }
 
@@ -414,7 +527,12 @@ int main(){
         sah.OdigrajPotez(2,7,3,7);
         sah.OdigrajPotez(7,7,1,1);
         sah.OdigrajPotez(3,7,4,6);
-        sah.OdigrajPotez(8,5,6,3);
+        sah.OdigrajPotez(8,5,8,6);
+        sah.OdigrajPotez(2,5,4,5);
+        sah.OdigrajPotez(8,6,7,7);
+        sah.OdigrajPotez(4,5,5,5);
+        sah.OdigrajPotez(7,7,4,7);
+        sah.OdigrajPotez(1,5,2,5);
         sah.Ispisi();
         ofstream ispis;
         ispis.open("sah.txt");
